@@ -1,100 +1,85 @@
-﻿#region Thread class
+﻿#region Advantages and disadvantages of using BackgroundWorker
 
 /*
- 
-Advantages and disadvantages of threads
 
-** The Thread class has the following advantages:
+The advantages of using BackgroundWorker are as follows:
 
-1 - Threads can be utilized to free up the main thread.
-2 - Threads can be used to break up a task into smaller units that can be executed concurrently.
+1 - Threads can be utilized to free up the main thread
+2 - Threads are created and maintained in an optimal way by the ThreadPool class's CLR
+3 - Graceful and automatic exception handling.
+4 - Supports progress reporting, cancellation, and completion logic using events.
 
-** The Thread class has the following disadvantages:
-
-1 - With more threads, the code becomes difficult to debug and maintain.
-2 - Thread creation puts a load on the system in terms of memory and CPU resources.
-3 - We need to do exception handling inside the worker method as any unhandled exceptions can result in the program crashing 
+The disadvantage of using BackgroundWorker is that, with more threads, the code becomes difficult to debug and maintain
 
 */
 
 #endregion
 
-#region Example 1
+using System.ComponentModel;
+using System.Text;
 
-Console.WriteLine("Start Application ...."); // Main Tread
+var backgroundWorker = new BackgroundWorker();
 
-PrintNumber10Times(); // Main Thread
+backgroundWorker.WorkerReportsProgress = true;  
+backgroundWorker.WorkerSupportsCancellation = true;
+backgroundWorker.DoWork += SimulateServiceCall;
+backgroundWorker.ProgressChanged += ProgressChanged;
+backgroundWorker.RunWorkerCompleted += RunWorkerCompleted;
+backgroundWorker.RunWorkerAsync();
 
-Console.WriteLine("End Application ....");  // Main Thread
+Console.WriteLine("To Cancel Worker Thread Press C.");
 
-static void PrintNumber10Times()
+while (backgroundWorker.IsBusy)
 {
-    for (int i = 0; i < 10; i++)
+    if (Console.ReadKey(true).KeyChar == 'C')
     {
-        Console.Write(1);
+        backgroundWorker.CancelAsync();
     }
-
-    Console.WriteLine();
 }
 
-#endregion
 
-#region Example 2
+static void SimulateServiceCall(object sender, DoWorkEventArgs e)
+{
+    var worker = sender as BackgroundWorker;
 
-//Console.WriteLine("Start Application ...."); // Main Tread
+    StringBuilder data = new StringBuilder();
 
-//CreateThreadUsingThreadClassWithParameter(); // Child Thread
+    for (int i = 1; i <= 100; i++)
+    {
+        if (!worker.CancellationPending)
+        {
+            data.Append(i);
+            worker.ReportProgress(i);
+            Thread.Sleep(100);
+        }
+        else
+        {
+            worker.CancelAsync();
+        }
+    }
 
-//Console.WriteLine("End Application ....");  // Main Thread
+    e.Result = data;
+}
 
-//static void CreateThreadUsingThreadClassWithParameter()
-//{
-//    Thread thread;
+static void ProgressChanged(object sender , ProgressChangedEventArgs args)
+{
+    Console.WriteLine($"{args.ProgressPercentage}% completed");
+}
 
-//    thread = new Thread(new ParameterizedThreadStart(PrintNumberNTimes));
+static void RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+{
+    if (e.Error != null)
+    {
+        Console.WriteLine(e.Error.Message);
+    }
+    else
+    {
+        Console.WriteLine($"Result from service call is { e.Result }");
+    }
+}
 
-//    thread.Start(10);
-//}
 
-//static void PrintNumberNTimes(object? times)
-//{
-//    int n = Convert.ToInt32(times);
 
-//    for (var i = 0; i < n; i++)
-//    {
-//        Console.Write(1);
-//    };
 
-//    Console.WriteLine();
-//}
 
-#endregion
-
-#region Example 3
-
-//Console.WriteLine("Start Application ...."); // Main Tread
-
-//CreateThreadUsingThreadClassWithoutParameter(); // Child Thread
-
-//Console.WriteLine("End Application ....");  // Main Thread
-
-//static void CreateThreadUsingThreadClassWithoutParameter()
-//{
-//    Thread thread;
-//    thread = new Thread(new ThreadStart(PrintNumber10Times));
-
-//    thread.Start();
-//}
-
-//static void PrintNumber10Times()
-//{
-//    for (int i = 0; i < 10; i++)
-//    {
-//        Console.Write(1);
-//    }
-
-//    Console.WriteLine();
-//}
-
-#endregion
 
